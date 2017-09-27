@@ -5,9 +5,14 @@ import org.getalp.dbnary.IWiktionaryDataHandler;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 public class ForeignLanguagesWiktionaryExtractor extends WiktionaryExtractor {
 
+    static Logger log = LoggerFactory.getLogger(WiktionaryExtractor.class);
+    
     protected final static String level2HeaderPatternString = "^==([^=].*[^=])==$";
     protected final static Pattern level2HeaderPattern;
 
@@ -34,22 +39,22 @@ public class ForeignLanguagesWiktionaryExtractor extends WiktionaryExtractor {
     @Override
     public void extractData() {
         if (wiktionaryPageName.startsWith("Reconstruction:")) {
-            wiktionaryPageName = wiktionaryPageName.split("/", 2)[1];
+            wiktionaryPageName = "_" + wiktionaryPageName.split("/", 2)[1];
         }
         Matcher l1 = level2HeaderPattern.matcher(pageContent);
         int nonEnglishSectionStart = -1;
         String lang = null;
-		String languageName = null;
+	String languageName = null;
         while (l1.find()) {
             wdh.initializePageExtraction(wiktionaryPageName);
             // System.err.println(l1.group());
             if (-1 != nonEnglishSectionStart) {
                 // Parsing a previous non english section;
-                extractNonEnglishData(lang, languageName, nonEnglishSectionStart, l1.start());
+		extractNonEnglishData(lang, languageName, nonEnglishSectionStart, l1.start());
                 nonEnglishSectionStart = -1;
             }
             languageName = l1.group(1).trim();
-            log.debug("{} {}", lang, languageName);
+            
             if (null != (lang = getNonEnglishLanguageCode(languageName))) {
                 nonEnglishSectionStart = l1.end();
             }

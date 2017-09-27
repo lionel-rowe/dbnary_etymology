@@ -259,7 +259,7 @@ public class WiktionaryExtractor extends AbstractWiktionaryExtractor {
     protected void extractEtymology(int blockStart, int end) {
         if (! wdh.isEnabled(ETYMOLOGY)) return;
         if (wiktionaryPageName.trim().split("\\s+").length >= 3) return;
-
+	System.out.format(pageContent.substring(blockStart, end));
         Etymology etymology = new Etymology(pageContent.substring(blockStart, end), ewdh.getCurrentEntryLanguage());
 
         etymology.fromDefinitionToSymbols();
