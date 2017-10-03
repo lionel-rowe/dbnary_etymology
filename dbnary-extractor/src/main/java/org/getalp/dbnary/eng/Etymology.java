@@ -120,7 +120,8 @@ public class Etymology {
 	toSymbols(definitionSymbolsList, definitionSymbolsListPattern);
 	
         parseEtyl();
-	if (lang.equals("io") || lang.equals("epo")){//lemmas in ido or esperanto
+
+	if (lang.equals("io") || lang.equals("ido") || lang.equals("epo")) {//lemmas in ido or esperanto
 	    //parsing languages where etymology is written differently: "From wordA, wordB, wordC, wordD", i.e., the word was constructed starting from wrods A,B,C and D 
 	    parseMultipleBorrowing();
 	} else {
@@ -431,6 +432,7 @@ public class Etymology {
 	    Symbols b = symbols.get(k);	    
 	}
 	ArrayList<Pair> match = findMatch(symbols, multipleBorrowingSymbolsPattern);
+       
 	if (match == null || match.size() == 0) {
 	    return;
 	}

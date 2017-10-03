@@ -247,7 +247,9 @@ public class Symbols {
         } else if (args.get("1").equals("etymtwin")) {//e.g.:    {{etymtwin|lang=en}} {{m|en|foo}}
             values.add("COGNATE_WITH");
         } else if (args.get("1").equals("bor") || args.get("1").equals("borrowing") || args.get("1").equals("loan")) {//borrowing
-            values.add("FROM");
+	    if (args.get("notext") != null && !args.get("notext").equals("1")) {
+		values.add("FROM");
+	    }
             int offset = 0;
             if (args.get("lang") == null) {
                 offset = 1;
@@ -513,8 +515,11 @@ public class Symbols {
 		args.clear();
 		values = null;
 	    }
-        } else if (args.get("1").equals("m") || args.get("1").equals("mention") || args.get("1").equals("l") || args.get("1").equals("link") || args.get("1").equals("_m")) {
-            //The parameter "1" is required.
+        } else if (args.get("1").equals("m") || args.get("1").equals("mention") || args.get("1").equals("l") || args.get("1").equals("link") || args.get("1").equals("_m") || args.get("1").equals("desc") || args.get("1").equals("descendant") || args.get("1").equals("desctree")) {
+            //====Descendants====
+	    //* {{desctree|fro|estoner}}
+	    //* {{desc|it|stonare}}
+	    //The parameter "1" is required.
             args.put("lang", args.get("2"));
 
             if (args.get("3") != null && !args.get("3").equals("")) {
