@@ -220,9 +220,9 @@ public class WiktionaryDataHandler extends OntolexBasedRDFDataHandler {
     }
     private Resource createLinkToWiktionaryPageResource(String wiktionaryPageName, String lang) {
 	if (wiktionaryPageName.startsWith("_")){
-	    return ResourceFactory.createResource(WIKT + "Reconstruction:" + uriEncode(lang) + "/" + uriEncode(wiktionaryPageName.substring(1)));
+	    return ResourceFactory.createResource(WIKT + "Reconstruction:" + uriEncode(lang) + "/" + wiktionaryPageName.substring(1));
 	} else {
-	    return ResourceFactory.createResource(WIKT + uriEncode(wiktionaryPageName) + "#" + uriEncode(lang));
+	    return ResourceFactory.createResource(WIKT + wiktionaryPageName + "#" + uriEncode(lang));
 	}
     }
     
@@ -365,34 +365,23 @@ public class WiktionaryDataHandler extends OntolexBasedRDFDataHandler {
         for (Symbols b : etymology.symbols) {
             if (b.values != null) {
                 if (b.values.get(0).equals("LEMMA")) {
-                    String word = b.args.get("word1").split(",")[0].trim();
+                    String word = b.args.get("word1");
 		    String lang = b.args.get("lang");
                     Resource vocable = eBox.createResource(getPrefix(eBox, lang) + "__ee_" + uriEncode(word), DBnaryEtymologyOnt.EtymologyEntry);
                     if (counter == 0) {
-			//System.out.format("counter = 0");
-                        if (ancestor != null) {
-			    //vocable is a descendant of ancestor
-			    //register vocable
-                            eBox.add(vocable, DBnaryEtymologyOnt.etymologicallyRelatedTo, ancestor);
-			    Resource w = createLinkToWiktionaryPageResource(currentWiktionaryPageName, currentEntryLanguageName);
-			    eBox.add(ancestor, RDFS.seeAlso, w);
-			    eBox.add(vocable, RDFS.seeAlso, w);			    
-			    eBox.add(vocable, RDFS.label, word, lang);
-                        }
 			//push vocable to list of ancestors
-                        ancestors.add(vocable);
-                    } else {
-			//System.out.format("counter > 0");
-			//if counter > 0
-			//register vocables equivalent to the vocable for counter = 0
-			Resource a = ancestors.get(ancestors.size() - 1);
-                        eBox.add(vocable, DBnaryEtymologyOnt.etymologicallyEquivalentTo, a);
-			eBox.add(vocable, DBnaryEtymologyOnt.etymologicallyRelatedTo, a);
+			ancestors.add(vocable);
+		    }
+		    //System.out.format("counter = 0");
+		    if (ancestor != null) {
+			//vocable is a descendant of ancestor
+			//register vocable
+			eBox.add(vocable, DBnaryEtymologyOnt.etymologicallyRelatedTo, ancestor);
 			Resource w = createLinkToWiktionaryPageResource(currentWiktionaryPageName, currentEntryLanguageName);
-			eBox.add(a, RDFS.seeAlso, w);
-			eBox.add(vocable, RDFS.seeAlso, w);			
+			eBox.add(ancestor, RDFS.seeAlso, w);
+			eBox.add(vocable, RDFS.seeAlso, w);			    
 			eBox.add(vocable, RDFS.label, word, lang);
-                    }
+		    }
                     counter++;
                 }
             }
