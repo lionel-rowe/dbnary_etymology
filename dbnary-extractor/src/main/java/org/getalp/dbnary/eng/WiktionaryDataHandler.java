@@ -191,11 +191,19 @@ public class WiktionaryDataHandler extends OntolexBasedRDFDataHandler {
         Resource vocable0 = null;
         int counter = 0;
         for (Symbols b : etymology.symbols) {
-            String word = b.args.get("word1").split(",")[0].trim();
+	    //cannot split word using comma because this is not vald in cases like
+	    //aim
+	    //=====Derived terms=====
+	    //* {{l|en|aim at}}
+	    //* {{l|en|ready, aim, fire!}}
+	    //in other words cannot do String word = b.args.get("word1").split(",")[0].trim();
+            String word = b.args.get("word1");
             if (word.equals("")) {
                 log.debug("Error: empty lemma found while processing derived words of {} in string {}", currentWiktionaryPageName, etymology.string);
-            } else {
-                if (counter == 0) {
+            } else if (word.trim().split("\\s+").length >= 3) { //do not save sentences
+		log.debug("Warning: ignoring derived term {} of {}", word, currentWiktionaryPageName);
+	    } else {
+		if (counter == 0) {
                     lang = b.args.get("lang");
                     //register derives_from
                     vocable0 = eBox.createResource(getPrefix(eBox, lang) + "__ee_" + uriEncode(word), DBnaryEtymologyOnt.EtymologyEntry);
@@ -210,7 +218,6 @@ public class WiktionaryDataHandler extends OntolexBasedRDFDataHandler {
 		    eBox.add(vocable2, DBnaryEtymologyOnt.etymologicallyRelatedTo, vocable0);
 		    eBox.add(vocable2, DBnaryEtymologyOnt.etymologicallyEquivalentTo, vocable0);
 		    Resource w = createLinkToWiktionaryPageResource(currentWiktionaryPageName, currentEntryLanguageName);
-			
 		    eBox.add(vocable2, RDFS.seeAlso, w);
 		    eBox.add(vocable2, RDFS.label, word, lang);
                 }		

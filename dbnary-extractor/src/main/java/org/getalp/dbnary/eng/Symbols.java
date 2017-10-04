@@ -136,40 +136,114 @@ public class Symbols {
         string = group;
         values = new ArrayList<String>();
         args = WikiTool.parseArgs(string);
-        if (args.get("1").equals("rel-top")) {
-	    if (args.get("2").equals("cognates") || args.get("2").equals("detailed etymology") || args.get("2").equals("Etymology Theories")) {
-                values.add("STOP");
+	if (args.get("1").equals("m") || args.get("1").equals("mention") || args.get("1").equals("l") || args.get("1").equals("link") || args.get("1").equals("_m") || args.get("1").equals("desc") || args.get("1").equals("descendant") || args.get("1").equals("desctree")) {
+	    //====Descendants====
+	    //* {{desctree|fro|estoner}}
+	    //* {{desc|it|stonare}}
+	    //The parameter "1" is required.
+	    args.put("lang", args.get("2"));
+	    
+	    if (args.get("3") != null && !args.get("3").equals("")) {
+		values.add("LEMMA");
+		args.put("word1", cleanUp(args.get("3")));
+		args.remove("3");
+		//I'm commenting what follows as it is wrong for {{m|oty|tr=vēr|4=root}}
+		//} else if (args.get("4") != null && !args.get("4").equals("")) {
+		//values.add("LEMMA");
+		//args.put("word1", cleanUp(args.get("4")));
+		//args.remove("4");
+		//if (args.get("5") != null && !args.get("5").equals("")) {
+		//    args.put("gloss1", args.get("5").replaceAll("\\[", "").replaceAll("\\]", ""));
+		//    args.remove("5");
+		//}
+	    } else if (args.get("4") != null && !args.get("4").equals("")) {
+		values.add("LEMMA");
+		args.put("word1", cleanUp(args.get("4")));
+		args.remove("4");
 	    } else {
-		log.debug("Ignoring template {} in either Etymology or Derived terms or Descendants section", string);
 		args.clear();
-		string = null;
 		values = null;
 	    }
-        } else if (args.get("1").equals("ja-r") || args.get("1").equals("ja-l")) {// {{ja-r|宮古島|^みやこじま|[[w:Miyako Island|Miyako Island]]; [[w:Miyakojima, Okinawa|Miyakojima, Okinawa]]}} 
-            args.put("lang", "ja");//Japanese
-            args.put("word1", args.get("2"));
-            values.add("LEMMA");
-        } else if (args.get("1").equals("Han compound")) {
-            for (int kk = 2; kk < 12; kk++) {
-                if (args.get(Integer.toString(kk)) != null) {
-                    if (!args.get(Integer.toString(kk)).equals("")) {
-                        args.put("word" + Integer.toString(kk - 2), args.get(Integer.toString(kk)));
-                        args.remove(Integer.toString(kk));
-                    }
-                } else {
-                    break;
-                }
-            }
-            args.put("lang", "hni");
-            values.add("FROM");
-            values.add("LEMMA");
+	} else if (args.get("1").equals("inh") || args.get("1").equals("inherited") || args.get("1").equals("der") || args.get("1").equals("derived")) {//TO DO: maybe add values.ad("FROM") by default;
+	    //e.g.:
+	    //from a {{inh|ro|VL.|-}} root
+	    //{{der|la|ett||tr=HERCLE}}
+	    int offset = 0;
+	    if (args.get("lang") == null) {
+                offset = 1;
+		args.put("lang", args.get("3"));
+		args.remove("3");
+	    }
+
+	    String key = Integer.toString(3 + offset);//first case
+	    if (args.get(key) != null && !args.get(key).equals("")) {
+                if (args.get(key).equals("-")) {
+                    values.add("LANGUAGE");
+		} else {
+                    values.add("LEMMA");
+		    args.put("word1", cleanUp(args.get(key)));
+		    args.remove(key);
+		}
+	    } else {
+                key = "alt";//second case
+		if (args.get(key) != null) {
+                    if (!args.get(key).equals("")) {
+                        values.add("LEMMA");
+			args.put("word1", cleanUp(args.get(key)));
+			args.remove(key);
+		    }
+		} else {
+                    //I'm commenting this case as it is wrong for template  from {{der|gl|oty|tr=iṅci|5=ginger}}
+                    //key = Integer.toString(4 + offset); //third case
+                    //if (args.get(key) != null && !args.get(key).equals("")) {
+                    //    values.add("LEMMA");
+                    //    args.put("word1", cleanUp(args.get(key)));
+                    //    args.remove(key);
+                    //} else {
+		    values.add("LANGUAGE");
+		    //}
+		}
+	    }
+	} else if (args.get("1").equals("etyl") || args.get("1").equals("_etyl")) {
+	    values.add("LANGUAGE");
+	    if (args.get("2") != null) {
+		args.put("lang", args.get("2"));
+		args.remove("2");
+	    }
+	} else if (args.get("1").equals("cog") || args.get("1").equals("cognate")) {//e.g.:       {{cog|fr|orgue}}
 	    values.add("STOP");
-            //} else if (args.get("1").startsWith("Han ety"){//Han etyl, Han etym
-            //ignore
-        } else if (args.get("1").equals("SI link")) {
-            args.put("lang", lang);
-            args.put("word1", args.get("2"));
-            values.add("LEMMA");
+	} else if (args.get("1").equals("etymtwin")) {//e.g.:    {{etymtwin|lang=en}} {{m|en|foo}}
+	    values.add("COGNATE_WITH");
+	} else if (args.get("1").equals("bor") || args.get("1").equals("borrowing") || args.get("1").equals("loan")) {//borrowing
+	    if (args.get("notext") != null && !args.get("notext").equals("1")) {
+		values.add("FROM");
+	    }
+	    int offset = 0;
+	    if (args.get("lang") == null) {
+		offset = 1;
+		args.put("lang", args.get("3"));
+		args.remove("3");
+	    }
+	    String word = args.get(Integer.toString(3 + offset));
+	    if (word != null) {
+		if (!word.equals("")) {
+		    if (!word.equals("-")) {//if lemma is not specified Wiktionary prints borrowing from Language.
+			values.add("LEMMA");
+			args.put("word1", cleanUp(word));
+			args.remove(Integer.toString(3 + offset));
+		    } else {
+			values.add("LANGUAGE");
+			args.remove(Integer.toString(3 + offset));
+		    }
+		} else {
+		    if (args.get(Integer.toString(4 + offset)) != null){
+			word = args.get(Integer.toString(4 + offset));
+			values.add("LEMMA");
+			args.put("word1", cleanUp(word));
+			args.remove(Integer.toString(4 + offset));
+		    }
+		}
+	    }
         } else if (args.get("1").equals("etymtree")) {
             if (args.get("3") != null && args.get("4") != null) {
                 args.put("lang", args.get("3"));
@@ -183,99 +257,6 @@ public class Symbols {
             }
             values.add("ETYMTREE");
             args.put("page", "Template:etymtree/" + args.get("lang") + "/" + args.get("word1"));
-        } else if (args.get("1").equals("Han simp")) {
-            if (args.get("2") != null) {
-                args.put("lang", "hni");
-                args.put("word1", args.get("2"));
-                args.remove("2");
-                values.add("FROM");
-                values.add("LEMMA");
-            } else {
-                args.clear();
-                values = null;
-                log.debug("Skipping Han simp template {}", string);
-            }
-        } else if (args.get("1").equals("eye dalect")) {
-            if (args.get("2") == null) {
-                values.add("FROM");
-            } else {
-                args.put("word1", cleanUp(args.get("2")));
-                args.remove("2");
-                values.add("LEMMA");
-            }
-        } else if (args.get("1").equals("sense")) {
-            log.debug("Found sense template {}", string);
-            values.add("SENSE");
-        } else if (args.get("1").equals("jbo-etym")) {//TODO: this is incorrect!!!
-            //make a copy of args.keySet()
-            ArrayList<String> tt = new ArrayList<>();
-            for (String kk : args.keySet()) {
-                tt.add(kk);
-            }
-            int counter = 1;
-            for (String k : tt) {
-                if (args.get(k) != null) {
-                    if (k.endsWith("_t")) {
-                        k = k.substring(0, k.length() - 2);
-                        args.put("lang" + Integer.toString(counter), k);
-                        args.put("word" + Integer.toString(counter), args.get(k + "_t"));
-                        args.remove(k + "_t");
-                        String tr = args.get(k + "_tr");
-                        if (tr != null) {
-                            args.put("tr" + counter, tr);
-                            args.remove(k + "_tr");
-                        }
-                        args.remove(k);
-                        counter++;
-                    }
-                }
-            }
-            args.put("lang", "jbo");
-            values.add("FROM");
-            values.add("LEMMA");
-        } else if (args.get("1").equals("cog") || args.get("1").equals("cognate")) {//e.g.:       {{cog|fr|orgue}}
-	    values.add("STOP");
-            /*if (args.get("2") != null && args.get("3") != null && !args.get("3").equals("-")) {
-	      values.add("");
-	      values.add("LEMMA");
-	      args.put("lang", args.get("2"));
-	      args.put("word1", cleanUp(args.get("3")));
-	      } else {
-	      args.clear();
-	      values = null;
-	      }*/
-        } else if (args.get("1").equals("etymtwin")) {//e.g.:    {{etymtwin|lang=en}} {{m|en|foo}}
-            values.add("COGNATE_WITH");
-        } else if (args.get("1").equals("bor") || args.get("1").equals("borrowing") || args.get("1").equals("loan")) {//borrowing
-	    if (args.get("notext") != null && !args.get("notext").equals("1")) {
-		values.add("FROM");
-	    }
-            int offset = 0;
-            if (args.get("lang") == null) {
-                offset = 1;
-                args.put("lang", args.get("3"));
-                args.remove("3");
-            }
-            String word = args.get(Integer.toString(3 + offset));
-            if (word != null) {
-                if (!word.equals("")) {
-                    if (!word.equals("-")) {//if lemma is not specified Wiktionary prints borrowing from Language.
-                        values.add("LEMMA");
-                        args.put("word1", cleanUp(word));
-                        args.remove(Integer.toString(3 + offset));
-                    } else {
-			values.add("LANGUAGE");
-			args.remove(Integer.toString(3 + offset));
-		    }
-                } else {
-		    if (args.get(Integer.toString(4 + offset)) != null){
-			word = args.get(Integer.toString(4 + offset));
-			values.add("LEMMA");
-			args.put("word1", cleanUp(word));
-			args.remove(Integer.toString(4 + offset));
-		    }
-                }
-            }
 	} else if (args.get("1").equals("lbor") || args.get("1").equals("learned borrowing")) {
             //The parameter "1" is required. The parameter "2" is required.
             String language = args.get("lang");
@@ -290,46 +271,6 @@ public class Symbols {
             if (word != null && !word.equals("-")) {
                 args.put("word1", cleanUp(word));
                 values.add("LEMMA");
-            }
-        } else if (args.get("1").equals("inh") || args.get("1").equals("inherited") || args.get("1").equals("der") || args.get("1").equals("derived")) {//TO DO: maybe add values.add("FROM") by default;
-            //e.g.:
-            //from a {{inh|ro|VL.|-}} root
-            //{{der|la|ett||tr=HERCLE}}
-            int offset = 0;
-            if (args.get("lang") == null) {
-                offset = 1;
-                args.put("lang", args.get("3"));
-                args.remove("3");
-            }
-
-            String key = Integer.toString(3 + offset);//first case
-            if (args.get(key) != null && !args.get(key).equals("")) {
-                if (args.get(key).equals("-")) {
-                    values.add("LANGUAGE");
-                } else {
-                    values.add("LEMMA");
-                    args.put("word1", cleanUp(args.get(key)));
-                    args.remove(key);
-                }
-            } else {
-                key = "alt";//second case
-                if (args.get(key) != null) {
-                    if (!args.get(key).equals("")) {
-                        values.add("LEMMA");
-                        args.put("word1", cleanUp(args.get(key)));
-                        args.remove(key);
-                    }
-                } else {
-		    //I'm commenting this case as it is wrong for template  from {{der|gl|oty|tr=iṅci|5=ginger}}
-                    //key = Integer.toString(4 + offset); //third case
-                    //if (args.get(key) != null && !args.get(key).equals("")) {
-                    //    values.add("LEMMA");
-                    //    args.put("word1", cleanUp(args.get(key)));
-                    //    args.remove(key);
-                    //} else {
-                        values.add("LANGUAGE");
-			//}
-                }
             }
         } else if (args.get("1").equals("cal") || args.get("1").equals("calque")) {
 	    //TODO: would like to extract more info from:
@@ -358,96 +299,6 @@ public class Symbols {
 		    values.add("LEMMA");
 		}
 	    }
-        } else if (args.get("1").equals("ko-etym-native")){
-	    if (args.get("3") != null){
-		args.put("lang", "ko");
-		args.put("word1", args.get("3"));
-		args.remove("3");
-		values.add("FROM");
-		values.add("LEMMA");
-	    } else {
-		args.clear();
-		values = null;
-	    }
-	} else if (args.get("1").startsWith("vi-l") || args.get("1").equals("zh-l") || args.get("1").equals("zh-m") || args.get("1").equals("ko-l") || args.get("1").equals("och-l") || args.get("1").equals("th-l") || args.get("1").equals("ltc-l")) {
-	    if (args.get("1").startsWith("vi-l")){
-	        args.put("lang", "vi");
-	    } else if (args.get("1").equals("zh-l") || args.get("1").equals("zh-m")){
-		args.put("lang", "zh");
-	    } else if (args.get("1").equals("ko-l")){// {{ko-l|대문||[[gate]]|大門}}
-		args.put("lang", "ko");
-	    } else if (args.get("1").equals("och-l")){// och-l|圈|circle
-		args.put("lang", "och");
-	    } else if (args.get("1").equals("th-l")){
-		args.put("lang", "th");
-	    } else if (args.get("1").equals("ltc-l")){ //{{ltc-l|覺|to awake, get insight}}
-		args.put("lang", "zh");
-	    }
-	    if (args.get("2") != null) {
-		args.put("word1", args.get("2"));
-		values.add("LEMMA");
-		args.remove("2");
-		if (args.get("3") != null) {
-		    args.put("gloss1", args.get("3").replaceAll("\\[", "").replaceAll("\\]", ""));
-		    args.remove("3");
-		}
-		if (args.get("4") != null) {
-		    args.put("synonim", args.get("4"));
-		    args.remove("4");
-		}
-	    } else {
-		args.clear();
-		values = null;
-	    }
-	} else if (args.get("1").equals("vi-etym-sino") || args.get("1").equals("ko-etym-Sino") || args.get("1").equals("ko-etym-sino")) {//this is imprecise
-	    //ko-etym-sino|生物|[[organism]]|化學|[[chemistry]]
-	    int nWords = 0;
-            args.put("lang", "zh");//TODO :check this
-            if (args.get("2") != null) {
-                args.put("word1", cleanUp(args.get("2")));
-                args.remove("2");
-		nWords ++;
-            } else {
-                values = null;
-                args.clear();
-            }
-            if (args.get("3") != null) {
-                args.put("gloss1", args.get("3").replaceAll("\\[", "").replaceAll("\\]", ""));
-                args.remove("3");
-            }
-            if (args.get("4") != null) {
-                args.put("word2", cleanUp(args.get("4")));
-                args.remove("4");
-		nWords ++;
-            }
-            if (args.get("5") != null) {
-                args.put("gloss2", args.get("5").replaceAll("\\[", "").replaceAll("\\]", ""));
-                args.remove("5");
-            }
-            if (args.get("6") != null) {
-                args.put("word3", cleanUp(args.get("6")));
-                args.remove("6");
-		nWords ++;
-            }
-            if (args.get("7") != null) {
-                args.put("gloss3", args.get("7"));
-                args.remove("7");
-            }
-	    if (nWords > 0){
-		values.add("LEMMA");
-	    }
-	    if (nWords > 1){
-		values.add("STOP");
-	    }
-	    if (nWords == 0){
-		args.clear();
-		values = null;
-	    }
-        } else if (args.get("1").equals("got-nom form of")){
-	    values.add("LEMMA");
-	    args.put("word1", cleanUp(args.get("2")));
-	    args.remove("2");
-	    args.put("lang", "got");
 	} else if (args.get("1").equals("abbreviation of")) {
             values.add("FROM");
             values.add("LEMMA");
@@ -498,50 +349,6 @@ public class Symbols {
             } else {
                 args.put("1", "_etyl");
                 values.add("LANGUAGE");
-            }
-        } else if (args.get("1").equals("fi-form of")) {
-            values.add("FROM");
-            values.add("LEMMA");
-            args.put("word1", cleanUp(args.get("2")));
-            args.put("lang", "fi");
-            args.remove("2");
-	} else if (args.get("1").equals("he-m") || args.get("1").equals("m/he") ) {//{{m/he|לכוא|dwv=לכֶאֹ||food}} 
-	    args.put("lang", "he");
-	    if (args.get("2") != null && !args.get("2").equals("")) {
-		values.add("LEMMA");
-		args.put("word1", cleanUp(args.get("2")));
-		args.remove("2");
-	    } else {
-		args.clear();
-		values = null;
-	    }
-        } else if (args.get("1").equals("m") || args.get("1").equals("mention") || args.get("1").equals("l") || args.get("1").equals("link") || args.get("1").equals("_m") || args.get("1").equals("desc") || args.get("1").equals("descendant") || args.get("1").equals("desctree")) {
-            //====Descendants====
-	    //* {{desctree|fro|estoner}}
-	    //* {{desc|it|stonare}}
-	    //The parameter "1" is required.
-            args.put("lang", args.get("2"));
-
-            if (args.get("3") != null && !args.get("3").equals("")) {
-                values.add("LEMMA");
-                args.put("word1", cleanUp(args.get("3")));
-                args.remove("3");
-		//I'm commenting what follows as it is wrong for {{m|oty|tr=vēr|4=root}} 
-		//} else if (args.get("4") != null && !args.get("4").equals("")) {
-                //values.add("LEMMA");
-                //args.put("word1", cleanUp(args.get("4")));
-                //args.remove("4");
-                //if (args.get("5") != null && !args.get("5").equals("")) {
-                //    args.put("gloss1", args.get("5").replaceAll("\\[", "").replaceAll("\\]", ""));
-                //    args.remove("5");
-                //}
-            } else if (args.get("4") != null && !args.get("4").equals("")) {
-		values.add("LEMMA");
-		args.put("word1", cleanUp(args.get("4")));
-		args.remove("4");
-	    } else {
-                args.clear();
-                values = null;
             }
         } else if (args.get("1").equals("blend") || args.get("1").equals("com") || args.get("1").equals("compound")) {
             //examples:
@@ -856,12 +663,6 @@ public class Symbols {
 		args.remove("2");
 	    }
 	    values.add("LEMMA");
-	    } else if (args.get("1").equals("etyl") || args.get("1").equals("_etyl")) {
-		values.add("LANGUAGE");
-		if (args.get("2") != null) {
-		    args.put("lang", args.get("2"));
-                args.remove("2");
-            }
 	} else if (args.get("1").equals("etystub") || args.get("1").equals("rfe") || args.get("1").equals("unk.")) {
             values.add("STOP");
 	} else if (args.get("1").equals("-er")) {
@@ -880,6 +681,27 @@ public class Symbols {
             args.put("lang", "en");
             values.add("LEMMA");
 	    values.add("STOP");
+	} else if (args.get("1").equals("fi-form of")) {
+	    values.add("FROM");
+	    values.add("LEMMA");
+	    args.put("word1", cleanUp(args.get("2")));
+	    args.put("lang", "fi");
+	    args.remove("2");
+	} else if (args.get("1").equals("he-m") || args.get("1").equals("m/he") ) {//{{m/he|אוכל|dwv=אֹכֶל||food}}
+	    args.put("lang", "he");
+	    if (args.get("2") != null && !args.get("2").equals("")) {
+		values.add("LEMMA");
+		args.put("word1", cleanUp(args.get("2")));
+		args.remove("2");
+	    } else {
+		args.clear();
+		values = null;
+	    }
+	} else if (args.get("1").equals("got-nom form of")){
+	    values.add("LEMMA");
+	    args.put("word1", cleanUp(args.get("2")));
+	    args.remove("2");
+	    args.put("lang", "got");
 	} else if (args.get("1").equals("ar-root")){
 	    args.put("lang", "ar");
 	    StringBuilder word = new StringBuilder();
@@ -896,6 +718,175 @@ public class Symbols {
 		values.add("FROM");
 		values.add("LEMMA");
 	    } else {
+		args.clear();
+		values = null;
+	    }
+	} else if (args.get("1").equals("sense")) {
+	    log.debug("Found sense template {}", string);
+	    values.add("SENSE");
+	} else if (args.get("1").equals("eye dalect")) {
+	    if (args.get("2") == null) {
+		values.add("FROM");
+	    } else {
+		args.put("word1", cleanUp(args.get("2")));
+		args.remove("2");
+		values.add("LEMMA");
+	    }
+	} else if (args.get("1").equals("Han compound")) {
+	    for (int kk = 2; kk < 12; kk++) {
+		if (args.get(Integer.toString(kk)) != null) {
+		    if (!args.get(Integer.toString(kk)).equals("")) {
+			args.put("word" + Integer.toString(kk - 2), cleanUp(args.get(Integer.toString(kk))));
+			args.remove(Integer.toString(kk));
+		    }
+		} else {
+		    break;
+		}
+	    }
+	    args.put("lang", "hni");
+	    values.add("FROM");
+	    values.add("LEMMA");
+	    values.add("STOP");
+	    //} else if (args.get("1").startsWith("Han ety"){//Han etyl, Han etym
+	    //ignore                            
+	} else if (args.get("1").equals("Han simp")) {
+	    if (args.get("2") != null) {
+		args.put("lang", "hni");
+		args.put("word1", cleanUp(args.get("2")));
+		args.remove("2");
+		values.add("FROM");
+		values.add("LEMMA");
+	    } else {
+		args.clear();
+		values = null;
+		log.debug("Skipping Han simp template {}", string);
+	    }
+	} else if (args.get("1").equals("rel-top")) {
+	    if (args.get("2").equals("cognates") || args.get("2").equals("detailed etymology") || args.get("2").equals("Etymology Theories")) {
+		values.add("STOP");
+	    } else {
+		log.debug("Ignoring template {} in either Etymology or Derived terms or Descendants section", string);
+		args.clear();
+		string = null;
+		values = null;
+	    }
+	} else if (args.get("1").equals("ja-r") || args.get("1").equals("ja-l")) {// {{ja-r|宮古島|^みやこじま|[[w:Miyako Island|Miyako Island]]; [[w:Miyakojima, Okinawa|Miyakojima, Okinawa]]}}
+	    args.put("lang", "ja");//Japanese
+	    args.put("word1", cleanUp(args.get("2")));
+	    values.add("LEMMA");
+	} else if (args.get("1").equals("SI link")) {
+	    args.put("lang", lang);
+	    args.put("word1", cleanUp(args.get("2")));
+	    values.add("LEMMA");
+	} else if (args.get("1").equals("jbo-etym")) {//TODO: this is incorrect!!!
+	    //make a copy of args.keySet()
+	    ArrayList<String> tt = new ArrayList<>();
+	    for (String kk : args.keySet()) {
+		tt.add(kk);
+	    }
+	    int counter = 1;
+	    for (String k : tt) {
+		if (args.get(k) != null) {
+		    if (k.endsWith("_t")) {
+			k = k.substring(0, k.length() - 2);
+			args.put("lang" + Integer.toString(counter), k);
+			args.put("word" + Integer.toString(counter), cleanUp(args.get(k + "_t")));
+			args.remove(k + "_t");
+			String tr = args.get(k + "_tr");
+			if (tr != null) {
+			    args.put("tr" + counter, tr);
+			    args.remove(k + "_tr");
+			}
+			args.remove(k);
+			counter++;
+		    }
+		}
+	    }
+	    args.put("lang", "jbo");
+	    values.add("FROM");
+	    values.add("LEMMA");
+	} else if (args.get("1").equals("ko-etym-native")){
+	    if (args.get("3") != null){
+		args.put("lang", "ko");
+		args.put("word1", cleanUp(args.get("3")));
+		args.remove("3");
+		values.add("FROM");
+		values.add("LEMMA");
+	    } else {
+		args.clear();
+		values = null;
+	    }
+	} else if (args.get("1").startsWith("vi-l") || args.get("1").equals("zh-l") || args.get("1").equals("zh-m") || args.get("1").equals("ko-l") || args.get("1").equals("och-l") || args.get("1").equals("th-l") || args.get("1").equals("ltc-l")) {
+	    if (args.get("1").startsWith("vi-l")){
+		args.put("lang", "vi");
+	    } else if (args.get("1").equals("zh-l") || args.get("1").equals("zh-m")){
+		args.put("lang", "zh");
+	    } else if (args.get("1").equals("ko-l")){// {{ko-l|대문||[[gate]]|大門}}
+		args.put("lang", "ko");
+	    } else if (args.get("1").equals("och-l")){// och-l|圈|circle
+		args.put("lang", "och");
+	    } else if (args.get("1").equals("th-l")){
+		args.put("lang", "th");
+	    } else if (args.get("1").equals("ltc-l")){ //{{ltc-l|覺|to awake, get insight}}
+		args.put("lang", "zh");
+	    }
+	    if (args.get("2") != null) {
+		args.put("word1", cleanUp(args.get("2")));
+		values.add("LEMMA");
+		args.remove("2");
+		if (args.get("3") != null) {
+		    args.put("gloss1", args.get("3").replaceAll("\\[", "").replaceAll("\\]", ""));
+		    args.remove("3");
+		}
+		if (args.get("4") != null) {
+		    args.put("synonim", args.get("4"));
+		    args.remove("4");
+		}
+	    } else {
+		args.clear();
+		values = null;
+	    }
+	} else if (args.get("1").equals("vi-etym-sino") || args.get("1").equals("ko-etym-Sino") || args.get("1").equals("ko-etym-sino")) {//this is imprecise
+	    //ko-etym-sino|生物|[[organism]]|化學|[[chemistry]]
+	    int nWords = 0;
+	    args.put("lang", "zh");//TODO :check this
+	    if (args.get("2") != null) {
+		args.put("word1", cleanUp(args.get("2")));
+		args.remove("2");
+		nWords ++;
+	    } else {
+		values = null;
+		args.clear();
+	    }
+	    if (args.get("3") != null) {
+		args.put("gloss1", args.get("3").replaceAll("\\[", "").replaceAll("\\]", ""));
+		args.remove("3");
+	    }
+	    if (args.get("4") != null) {
+		args.put("word2", cleanUp(args.get("4")));
+		args.remove("4");
+		nWords ++;
+	    }
+	    if (args.get("5") != null) {
+		args.put("gloss2", args.get("5").replaceAll("\\[", "").replaceAll("\\]", ""));
+		args.remove("5");
+	    }
+	    if (args.get("6") != null) {
+		args.put("word3", cleanUp(args.get("6")));
+		args.remove("6");
+		nWords ++;
+	    }
+	    if (args.get("7") != null) {
+		args.put("gloss3", args.get("7"));
+		args.remove("7");
+	    }
+	    if (nWords > 0){
+		values.add("LEMMA");
+	    }
+	    if (nWords > 1){
+		values.add("STOP");
+	    }
+	    if (nWords == 0){
 		args.clear();
 		values = null;
 	    }
@@ -946,7 +937,7 @@ public class Symbols {
 	    if (link.equals("wiktionary")){
 		args.put("link", "wiktionary");
 		language = lang;
-	    } else if (link.equals("image") || link.equals("category") || link.equals("file") || link.equals("wikisource") || link.equals("s") || link.equals("appendix") || link.equals("citations") || link.equals("special") || link.equals("image") || link.equals("meta") || link.equals("m") || link.equals("wikipedia") || link.equals("w")){
+	    } else if (link.equals("image") || link.equals("category") || link.equals("file") || link.equals("wikisource") || link.equals("s") || link.equals("appendix") || link.equals("citations") || link.equals("special") || link.equals("image") || link.equals("meta") || link.equals("m") || link.equals("wikipedia") || link.equals("w") || link.equals("d")){
 		log.debug("Ignoring link {}", string);
 		args = null;
 		string = null;
@@ -1022,7 +1013,7 @@ public class Symbols {
      * @return a String where some characters have been replaced
      */
     public String cleanUp(String word) {
-        word = word.replaceAll("\\[", "").replaceAll("\\]", "").trim().replaceAll("'", "__").replaceAll("\\*", "_");
+        word = word.replaceAll("\\[", "").replaceAll("\\]", "").trim().replaceAll("'", "__").replaceAll("^w:", "").replaceAll("-\\*", "-_").replaceAll("\\*", "_");
         return word;
     }
     
