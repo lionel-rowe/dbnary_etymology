@@ -778,7 +778,7 @@ public class Symbols {
 	    args.put("lang", lang);
 	    args.put("word1", cleanUp(args.get("2")));
 	    values.add("LEMMA");
-	} else if (args.get("1").equals("jbo-etym")) {//TODO: this is incorrect!!!
+	} else if (args.get("1").equals("jbo-etym")) {
 	    //make a copy of args.keySet()
 	    ArrayList<String> tt = new ArrayList<>();
 	    for (String kk : args.keySet()) {
@@ -816,10 +816,14 @@ public class Symbols {
 		args.clear();
 		values = null;
 	    }
+	} else if (args.get("1").equals("zh-psm")) {
+	    args.put("word1", cleanUp(args.get("2")));
+	    values.add("LEMMA");
+	    args.remove("2");
 	} else if (args.get("1").startsWith("vi-l") || args.get("1").equals("zh-l") || args.get("1").equals("zh-m") || args.get("1").equals("ko-l") || args.get("1").equals("och-l") || args.get("1").equals("th-l") || args.get("1").equals("ltc-l")) {
 	    if (args.get("1").startsWith("vi-l")){
 		args.put("lang", "vi");
-	    } else if (args.get("1").equals("zh-l") || args.get("1").equals("zh-m")){
+	    } else if (args.get("1").equals("zh-l") || args.get("1").equals("zh-m") || args.get("1").equals("ltc-l")){ //{{ltc-l|覺|to awake, get insight}} 
 		args.put("lang", "zh");
 	    } else if (args.get("1").equals("ko-l")){// {{ko-l|대문||[[gate]]|大門}}
 		args.put("lang", "ko");
@@ -827,8 +831,6 @@ public class Symbols {
 		args.put("lang", "och");
 	    } else if (args.get("1").equals("th-l")){
 		args.put("lang", "th");
-	    } else if (args.get("1").equals("ltc-l")){ //{{ltc-l|覺|to awake, get insight}}
-		args.put("lang", "zh");
 	    }
 	    if (args.get("2") != null) {
 		args.put("word1", cleanUp(args.get("2")));
@@ -937,7 +939,7 @@ public class Symbols {
 	    if (link.equals("wiktionary")){
 		args.put("link", "wiktionary");
 		language = lang;
-	    } else if (link.equals("image") || link.equals("category") || link.equals("file") || link.equals("wikisource") || link.equals("s") || link.equals("appendix") || link.equals("citations") || link.equals("special") || link.equals("image") || link.equals("meta") || link.equals("m") || link.equals("wikipedia") || link.equals("w") || link.equals("d")){
+	    } else if (link.equals("image") || link.equals("category") || link.equals("file") || link.equals("wikisource") || link.equals("s") || link.equals("appendix") || link.equals("citations") || link.equals("special") || link.equals("image") || link.equals("meta") || link.equals("m") || link.equals("wikipedia") || link.equals("w") || link.equals("d")){// || link.equals("folk etymology") || link.equals("habitational")){
 		log.debug("Ignoring link {}", string);
 		args = null;
 		string = null;
@@ -980,7 +982,14 @@ public class Symbols {
 	//parse word
 	if (word.equals("")){ //[[#English|tule]]
 	    word = splitArgs.get(1).trim();
+	} else if (word.equalsIgnoreCase("ateji")) {
+	    log.debug("Ignoring link {}", string);
+	    args = null;
+	    string = null;
+	    values = null;
+	    return;
 	}
+	
 	args.put("word1", cleanUp(word));
 	
 	args.put("1", "l");

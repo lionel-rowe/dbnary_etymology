@@ -38,13 +38,14 @@ public class Etymology {
         tmp.put("COMMA", Arrays.asList(","));
         tmp.put("YEAR", Arrays.asList("(?:[Aa].\\s*?[Cc].?|[Bb].?\\s*[Cc].?)?\\s*\\d++\\s*(?:[Aa].?\\s*[Cc].?|[Bb].?\\s*[Cc].?|th century|\\{\\{C\\.E\\.\\}\\})?"));
         tmp.put("AND", Arrays.asList("\\s+and\\s+", "with suffix "));
-        tmp.put("PLUS", Arrays.asList("\\+"));
+        tmp.put("PLUS", Arrays.asList("\\+", " plus "));
         tmp.put("DOT", Arrays.asList("\\.", ";"));
-        tmp.put("OR", Arrays.asList("[^a-zA-Z0-9]or[^a-zA-Z0-9]")); //this should become STOP
+        tmp.put("OR", Arrays.asList("[^a-zA-Z0-9]or[^a-zA-Z0-9]", "either", "whether")); //this should become STOP
         tmp.put("WITH", Arrays.asList("[^a-zA-Z0-9]with[^a-zA-Z0-9]"));
-	tmp.put("STOP", Arrays.asList("Via ", " via ", "[Ss]uperseded", "[Ss]uperseding", "[Dd]isplaced(?: native)?", "[Dd]isplacing", "[Rr]eplaced", "[Mm]ode(?:l)?led on", "[Rr]eplacing", "[Cc]oined by", "equivalent to\\s*\\{\\{[^\\}]+\\}\\}"));//this includes three types of patterns: via, superseded and equivalent to
+	tmp.put("STOP", Arrays.asList("Via ", " via ", " through ", "[Ss]uperseded", "[Ss]uperseding", "[Dd]isplaced(?: native)?", "[Dd]isplacing", "[Rr]eplaced", "[Mm]ode(?:l)?led on", "[Rr]eplacing", "[Cc]oined by", "equivalent to\\s*\\{\\{[^\\}]+\\}\\}"));//this includes three types of patterns: via, superseded and equivalent to
         tmp.put("COLON", Arrays.asList(":"));
 	tmp.put("SLASH", Arrays.asList("/"));
+    
         mappings = new HashMap(tmp);
     }
 
@@ -56,7 +57,7 @@ public class Etymology {
     public static Pattern definitionSymbolsListPattern = Pattern.compile("(" + definitionSymbolsList.stream().map(e -> mappings.get(e).stream().collect(Collectors.joining("|"))).collect(Collectors.joining(")|(")) + ")");
     
     public static Pattern definitionSymbolsPattern = Pattern.compile("((FROM )?(LANGUAGE LEMMA |LEMMA |LANGUAGE )(COMMA |SLASH |DOT |OR |STOP ))+");
-    public static Pattern compoundSymbolsPattern = Pattern.compile("((COMPOUND_OF |FROM )(LANGUAGE )?(LEMMA (COMMA LEMMA )*)(?:(PLUS |(COMMA)? AND |WITH )(LANGUAGE )?(LEMMA (COMMA LEMMA )*))+)|((LANGUAGE )?(LEMMA (COMMA LEMMA )*)(?:(PLUS )(LANGUAGE )?(LEMMA (COMMA LEMMA )*))+)");
+    public static Pattern compoundSymbolsPattern = Pattern.compile("((COMPOUND_OF |FROM )(LANGUAGE )?(LEMMA (COMMA LEMMA )*)(?:(PLUS |(COMMA )?AND |WITH )(LANGUAGE )?(LEMMA (COMMA LEMMA )*))+)|((LANGUAGE )?(LEMMA (COMMA LEMMA )*)(?:(PLUS )(LANGUAGE )?(LEMMA (COMMA LEMMA )*))+)");
     //TODO: add ARROW and allow for situations like Italian: LEMMA LEMMA COMMA LEMMA
     public static Pattern bulletSymbolsPattern = Pattern.compile("((((LEMMA )(COMMA )?)+)|(LANGUAGE ))(COLON ((LEMMA)( COMMA )?)+)?");
     public static Pattern tableDerivedLemmasPattern = Pattern.compile("(LEMMA)(?: COMMA (LEMMA))*");
@@ -83,7 +84,7 @@ public class Etymology {
         }
 
         toSymbols(bulletSymbolsList, bulletSymbolsListPattern);
-
+	
         ArrayList<Symbols> lemmas = new ArrayList<>();
         Matcher m = tableDerivedLemmasPattern.matcher(toString(symbols));
         while (m.find()) {
@@ -373,33 +374,43 @@ public class Etymology {
         return s.toString();
     }
 
+    /**
+     * @param a an ArrayList of Symbols
+     * @param p a pattern  
+     * @return a Pair with elements start and end; a.get(start) is where the match starts and a.get(end) is where the match ends
+     */
     public ArrayList<Pair> findMatch(ArrayList<Symbols> a, Pattern p) {
+	//looking for a match of toString(a) to pattern p
 	ArrayList<Pair> toreturn = new ArrayList<Pair>();
         if (a == null || a.size() == 0) {
             return toreturn;
         }
-	
-        ArrayList<Integer> arrayListIndex = new ArrayList<Integer>();
-        ArrayList<Integer> arrayListPosition = new ArrayList<Integer>();
+
+	//if i is in arrayListIndex you can do a.get(i) (so i is the index of the element in the array a)
+	//if c is in coordinate you can do toSymbol(a)[c] (so c is the position of the character in the symbol string)
+        ArrayList<Integer> index = new ArrayList<Integer>();
+        ArrayList<Integer> coordinate = new ArrayList<Integer>();
         int c = 0;
-        arrayListPosition.add(c);
+        coordinate.add(c);
         for (int i = 0; i < a.size(); i++) {
             Symbols b = a.get(i);
             for (int j = 0; j < b.values.size(); j++) {
-                arrayListIndex.add(i);
+                index.add(i);
+		//the symbol corresponding to b.values.get(j) is b.string
                 c += b.values.get(j).length() + 1;
-                arrayListPosition.add(c);
+                coordinate.add(c);
             }
         }
+			  
         Matcher m = p.matcher(toString(a));
-       
+        
         while (m.find()) {
             int start = -1, end = -1;
-            for (int i = 0; i < arrayListPosition.size() - 1; i++) {
-                if (arrayListPosition.get(i) == m.start()) {
-                    start = arrayListIndex.get(i);
-                } else if (arrayListPosition.get(i + 1) == m.end()) {
-                    end = arrayListIndex.get(i);
+            for (int i = 0; i < coordinate.size() - 1; i++) {
+                if (coordinate.get(i) == m.start()) {
+                    start = index.get(i);
+                } else if (coordinate.get(i + 1) == m.end()) {
+                    end = index.get(i);
                 }
             }
             if (start < 0) {
@@ -410,9 +421,14 @@ public class Etymology {
 		//stop at first stop symbol i.e. STOP | DOT | OR
 		Matcher mStop = stopSymbolsPattern.matcher(toString(a).substring(m.start(), m.end()));
 		if (mStop.find()){
-		    for (int i = 0; i < arrayListPosition.size() - 1; i++) {
-			if (arrayListPosition.get(i + 1) == mStop.end()) {
-			   end = arrayListIndex.get(i);
+		    //found a stop in string toString(a).substring(m.start(), m.end())
+		    //the match starts at m.start() + mStop.start()
+		    //the match ends at m.start() + mStop.end()
+		    //the matching string is toString(a).substring(m.start() + mStop.start(), m.start() + mStop.end())
+		    //transform from coordinate to index
+		    for (int i = 0; i < coordinate.size() - 1; i++) {
+			if (coordinate.get(i + 1) == m.start() + mStop.end()) {
+			    end = index.get(i);
 			}
 		    }
 		}
@@ -463,6 +479,8 @@ public class Etymology {
      * with a single "LEMMA" Symbol of type compound|lang1|word1|lang2|word2
      */
     public void parseCompound() {
+	//System.out.format(toString(symbols));
+	//System.out.format(compoundSymbolsPattern.pattern());
         ArrayList<Pair> match = findMatch(symbols, compoundSymbolsPattern);
         if (match == null || match.size() == 0) {
             return;
